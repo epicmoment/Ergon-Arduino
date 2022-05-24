@@ -116,7 +116,7 @@ void visScore() {
 void skruPaaLed(int lednr) {
 
 	if (lednr <= 2) {
-			analogWrite(scoreleds[lednr][0], 255);
+		analogWrite(scoreleds[lednr][0], 255);
 	}
 
 	if (lednr >= 2) {
