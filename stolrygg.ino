@@ -29,13 +29,19 @@ void setup() {
 
 void loop() {
 
+    // Leser av inndata fra trykksensorer
     trykk1 = digitalRead(sensor1);
     trykk2 = digitalRead(sensor2);
     
+    // Sjekker om kun en trykksensor gir input om gangen. Om begge 
+    // er på sitter brukeren riktig, om ingen er på sitter ikke
+    // brukeren på stolen, og om kun en er på sitter brukeren
+    // antakeligvis med dårlig holdning.
     if (trykk1 != trykk2) {
 
         holdning = LOW;
         
+        // Teller hvor lenge brukeren har sittet med dårlig holdning.
         if (counter < 10) {
 
             counter++;
@@ -51,11 +57,13 @@ void loop() {
             }
 
         }
-      
+    
+    // Brukeren sitter enten med god holdning eller ikke på stolen.
     } else {
           
         holdning = HIGH;
-      
+
+        // Slutter å varsle og teller ned hvor lenge brukeren har sittet med dårlig holdning.      
         if (counter > 0) {
           
             if (varsle == HIGH) {
@@ -87,12 +95,12 @@ void loop() {
         }
     }
 
-    /*Serial.print("Sensor 1: ");
+    Serial.print("Sensor 1: ");
     Serial.print(trykk1);
     Serial.print(" - Sensor 2: ");
     Serial.print(trykk2);
     Serial.print(" - Count: ");
-    Serial.println(counter);*/
+    Serial.println(counter);
   
     delay(300);
 }
