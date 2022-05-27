@@ -158,7 +158,6 @@ void visScore() {
 	Serial.println(score);
 
 	antallLedsTotal = score + 1;
-	Serial.print(antallLedsTotal);
 	antallLedsPaa = 0;
 	skruPaaScoreLed(antallLedsPaa);
 
