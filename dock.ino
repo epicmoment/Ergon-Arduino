@@ -26,6 +26,9 @@ unsigned long visScoreLengde_s = 4;
 int antallLedsTotal = 0;
 int antallLedsPaa = 0;
 
+// Variabel for visning av pausevarsel
+int visPause = 0;
+
 void setup() {
 
 	Serial.begin(9600);
@@ -53,17 +56,23 @@ void loop() {
   	if (millis() > serialSiste + serialIntervall_ms) {
     
     	serialSiste = millis();
+
+		visPause = false;
       
         if (Serial.available() > 0) {
 
             int byte = Serial.read();
             serialTotal++;
 
-            if (byte == 1) {
+            if (byte % 2 == 1) {
                 serialGode++;
             }
 
-			// Til debugging
+			if (byte > 1) {
+				visPause = true;
+			}
+
+			// Til debuggings
 			Serial.print("Byte: ");
 			Serial.print(byte);
             Serial.print(" - Total: ");
@@ -75,14 +84,14 @@ void loop() {
       
     }
 
-	// Oppgaver om skal utføres om poengsumen vises i denne syklusen
+	// Oppgaver om skal utføres om poengsumen vises i denne syklusen.
 	if (viserScore) {
 
 		// Sjekker om alle leds som skal på er på, ellers skrur den på
 		// neste led som skal på. Dette er hvordan den
 		// gradvise/animerte visningen oppnås.
 		if (antallLedsPaa < antallLedsTotal) {
-			skruPaaLed(antallLedsPaa);
+			skruPaaScoreLed(antallLedsPaa);
 		}
 
 		// Sjekker om det har gått fire sekund siden knappen for å vise
@@ -90,10 +99,19 @@ void loop() {
 		if (millis() > visScoreSiste + (visScoreLengde_s*1000)) {
 
 			Serial.println("Fjerner lys!");
-			skjulScore();
+			skruAvLeds();
 			viserScore = false;
 
 		}
+
+	} else if (visPause) {
+
+		digitalWrite(10, 255);
+		digitalWrite(3, 255);
+
+	} else {
+
+		skruAvLeds();
 
 	}
   
@@ -130,13 +148,14 @@ void visScore() {
 
 	antallLedsTotal = score + 1;
 	antallLedsPaa = 0;
-	skruPaaLed(antallLedsPaa);
+	skruAvLeds();
+	skruPaaScoreLed(antallLedsPaa);
 
 }
 
 // Funksjon for å skru på en LED om gangen, brukes for å animere
 // visningen av poengsum
-void skruPaaLed(int lednr) {
+void skruPaaScoreLed(int lednr) {
 
 	if (lednr <= 2) {
 		analogWrite(scoreleds[lednr][0], 255);
@@ -151,7 +170,7 @@ void skruPaaLed(int lednr) {
 }
 
 // Funksjon for å skru av alle LEDs når poengsummen ikke skal vises.
-void skjulScore() {
+void skruAvLeds() {
 
 	for (int i = 0; i < 5; i++) {
 		for (int j = 0; j < 2; j++) {
