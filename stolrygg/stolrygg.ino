@@ -93,43 +93,41 @@ void loop() {
 
     if (trykk1 || trykk2) {
 
-        if (pauseCounter < 100) {
+        if (pauseCounter < 50) {
 
             pauseCounter++;
 
         } else {
 
             if (!pauseVarsle) {
-
-                if (pauseVarselVib) {
-
-                    analogWrite(vib1, 255);
-                    analogWrite(vib2, 255);
-                    pauseVarselVib = LOW;
-
-                } else {
-
-                    analogWrite(vib1, 0);
-                    analogWrite(vib2, 0);
-                    pauseVarselVib = HIGH;
-
-                }
-
+                pauseVarsle = HIGH;
             }
+
+            analogWrite(vib1, pauseVarselVib ? 255 : 0);
+            analogWrite(vib2, pauseVarselVib ? 255 : 0);
+            pauseVarselVib = !pauseVarselVib;
 
         }
 
     } else {
 
+        if (pauseVarsle) {
+                    
+            pauseVarsle = LOW;
+            analogWrite(vib1, 0);
+            analogWrite(vib2, 0);
+
+        }
+
         if (pauseCounter > 0) {
 
-            pauseCounter -= 10;
+            if (pauseCounter > 5) {
 
-            if (pauseVarsle) {
-                
-                pauseVarsle = LOW;
-                analogWrite(vib1, 0);
-                analogWrite(vib2, 0);
+                pauseCounter -= 5;
+
+            } else {
+
+                pauseCounter = 0;
 
             }
 
@@ -138,10 +136,10 @@ void loop() {
     }
 
     // Send data om holdning og pause til docken hver 11. kjøresyklus
-    // 0: Dårlig holdning
-    // 1: God holdning
-    // 2: Ta pause, dårlig holdning
-    // 3: Ta pause, god holdning
+    // 1: Dårlig holdning
+    // 2: God holdning
+    // 3: Ta pause, dårlig holdning
+    // 4: Ta pause, god holdning
     if (sendeCount < 10) {
         
         sendeCount++;
@@ -150,7 +148,7 @@ void loop() {
 
         if ((trykk1 || trykk2)) {
 
-            sendeData = 1 + holdning + (pauseVarsle);
+            sendeData = 1 + holdning + (pauseVarsle*2);
         
             Serial.write(sendeData);
             sendeCount = 0;
@@ -159,14 +157,16 @@ void loop() {
         
     }
 
-    Serial.print("Sensor 1: ");
+    /* Serial.print("Sensor 1: ");
     Serial.print(trykk1);
     Serial.print(" - Sensor 2: ");
     Serial.print(trykk2);
     Serial.print(" - HCount: ");
     Serial.print(holdningCounter);
     Serial.print(" - PCount: ");
-    Serial.println(pauseCounter);
-  
+    Serial.print(pauseCounter);
+    Serial.print(" - Varsle pause: ");
+    Serial.println(pauseVarsle); */
+
     delay(300);
 }

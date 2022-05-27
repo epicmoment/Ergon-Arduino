@@ -16,8 +16,8 @@ int knapp = 7;
 // Variabler for henting og telling av data fra stolryggen
 unsigned long serialSiste = millis();
 unsigned serialIntervall_ms = 1000;
-int serialTotal = 0;
-int serialGode = 0;
+int serialTotal = 1;
+int serialGode = 1;
 
 // Variabler for visning av poengsum.
 bool viserScore = false; 
@@ -50,7 +50,7 @@ void setup() {
 
 // Hovedloop hvor mange ting sjekkes 10 ganger i sekundet.
 void loop() {
-  
+ 
   	// Innlesing av data fra stolrygg via Serial hvert sekund.
 	// Hopper over om det er under et sekund siden siste henting.
   	if (millis() > serialSiste + serialIntervall_ms) {
@@ -64,11 +64,11 @@ void loop() {
             int byte = Serial.read();
             serialTotal++;
 
-            if (byte % 2 == 1) {
+            if (byte % 2 == 0) {
                 serialGode++;
             }
 
-			if (byte > 1) {
+			if (byte > 2) {
 				visPause = true;
 			}
 
@@ -90,6 +90,12 @@ void loop() {
 		// Sjekker om alle leds som skal på er på, ellers skrur den på
 		// neste led som skal på. Dette er hvordan den
 		// gradvise/animerte visningen oppnås.
+
+		/*Serial.print("Leds som skal på: ");
+		Serial.print(antallLedsTotal);
+		Serial.print(" - Leds som er på: ");
+		Serial.println(antallLedsPaa);*/
+
 		if (antallLedsPaa < antallLedsTotal) {
 			skruPaaScoreLed(antallLedsPaa);
 		}
@@ -111,7 +117,10 @@ void loop() {
 
 	} else {
 
-		skruAvLeds();
+		//TODO: Legg til sjekk om pauselys er på!
+		if (true) {
+			skruAvLeds();
+		}
 
 	}
   
@@ -138,6 +147,8 @@ void loop() {
 // Funksjon for å beregne poengsum og å starte gradvis/animert visning
 // av den
 void visScore() {
+	
+	skruAvLeds();
 
 	float score = (float) serialGode / (float) serialTotal * 4.7;
 
@@ -147,8 +158,8 @@ void visScore() {
 	Serial.println(score);
 
 	antallLedsTotal = score + 1;
+	Serial.print(antallLedsTotal);
 	antallLedsPaa = 0;
-	skruAvLeds();
 	skruPaaScoreLed(antallLedsPaa);
 
 }
@@ -157,13 +168,12 @@ void visScore() {
 // visningen av poengsum
 void skruPaaScoreLed(int lednr) {
 
-	if (lednr <= 2) {
-		analogWrite(scoreleds[lednr][0], 255);
-	}
+	Serial.println(lednr);
 
-	if (lednr >= 2) {
-		analogWrite(scoreleds[lednr][1], 255);
-	}
+	int farger[5][2] = {{255, 0}, {255, 50}, {170, 220}, {50, 255}, {0, 255}};
+
+	analogWrite(scoreleds[lednr][0], farger[lednr][0]);
+	analogWrite(scoreleds[lednr][1], farger[lednr][1]);
 
 	antallLedsPaa++;
 
