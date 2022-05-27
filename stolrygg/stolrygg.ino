@@ -159,12 +159,14 @@ void loop() {
         
     }
 
-    /*Serial.print("Sensor 1: ");
+    Serial.print("Sensor 1: ");
     Serial.print(trykk1);
     Serial.print(" - Sensor 2: ");
     Serial.print(trykk2);
-    Serial.print(" - Count: ");
-    Serial.println(holdningCounter);*/
+    Serial.print(" - HCount: ");
+    Serial.print(holdningCounter);
+    Serial.print(" - PCount: ");
+    Serial.println(pauseCounter);
   
     delay(300);
 }
