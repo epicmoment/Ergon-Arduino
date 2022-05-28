@@ -93,7 +93,7 @@ void loop() {
 
     if (trykk1 || trykk2) {
 
-        if (pauseCounter < 50) {
+        if (pauseCounter < 450) {
 
             pauseCounter++;
 
@@ -121,9 +121,9 @@ void loop() {
 
         if (pauseCounter > 0) {
 
-            if (pauseCounter > 5) {
+            if (pauseCounter > 45) {
 
-                pauseCounter -= 5;
+                pauseCounter -= 45;
 
             } else {
 
