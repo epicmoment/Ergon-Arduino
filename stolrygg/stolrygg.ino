@@ -7,10 +7,15 @@ int femvolt2 = 12;
 int trykk1 = LOW;
 int trykk2 = LOW;
 
+int klokkehastighet = 5;
+
+int holdningSek = 15;
 int holdning = HIGH;
 int holdningCounter = 0;
 int holdningVarsle = LOW;
 
+int pauseEtterMin = 2;
+int pauseVarighetMin = 1;
 int pauseCounter = 0;
 int pauseVarsle = LOW;
 int pauseVarselVib = LOW;
@@ -50,7 +55,7 @@ void loop() {
         holdning = LOW;
         
         // Teller hvor lenge brukeren har sittet med dårlig holdning.
-        if (holdningCounter < 10) {
+        if (holdningCounter < holdningSek*klokkehastighet) {
 
             holdningCounter++;
 
@@ -88,12 +93,12 @@ void loop() {
             }
 
         }
-      
+    
     }
 
     if (trykk1 || trykk2) {
 
-        if (pauseCounter < 450) {
+        if (pauseCounter < pauseEtterMin*60*5) {
 
             pauseCounter++;
 
@@ -121,9 +126,11 @@ void loop() {
 
         if (pauseCounter > 0) {
 
-            if (pauseCounter > 45) {
+            int tellNedMed = pauseVarighetMin*60*5*(pauseEtterMin/pauseVarighetMin);
 
-                pauseCounter -= 45;
+            if (pauseCounter > tellNedMed) {
+
+                pauseCounter -= tellNedMed;
 
             } else {
 
@@ -168,5 +175,5 @@ void loop() {
     Serial.print(" - Varsle pause: ");
     Serial.println(pauseVarsle); */
 
-    delay(300);
+    delay(200);
 }
