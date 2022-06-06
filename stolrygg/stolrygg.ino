@@ -9,15 +9,16 @@ int trykk2 = LOW;
 
 int klokkehastighet = 5;
 
-int holdningSek = 15;
+int holdningVarselSek = 15;
 int holdning = HIGH;
 int holdningCounter = 0;
 int holdningVarsle = LOW;
+int holdningVarselIntervallSek = 8;
 
 int pauseEtterMin = 2;
 int pauseVarighetMin = 1;
 int pauseCounter = 0;
-int pauseVarsle = LOW;
+int pauseStatus = 0; // 0: Ikke ta pause, 1: Ta pause, 2: Bruker tar pause, 3: Pause er ferdig, 4: Bruker avsluttet pause
 int pauseVarselVib = LOW;
 
 int sendeCount = 0;
@@ -37,6 +38,7 @@ void setup() {
     
 }
 
+// Kjører 5 ganger i sekundet
 void loop() {
 
     // Leser av inndata fra trykksensorer
@@ -55,22 +57,31 @@ void loop() {
         holdning = LOW;
         
         // Teller hvor lenge brukeren har sittet med dårlig holdning.
-        if (holdningCounter < holdningSek*klokkehastighet) {
+        if (holdningCounter < holdningVarselSek*klokkehastighet) {
 
             holdningCounter++;
 
         } else {
 
-            if (!holdningVarsle) {
-                
-                if (trykk1) {
-                    analogWrite(vib1, 255);
-                } else {
-                    analogWrite(vib2, 255);
-                }
+            holdningVarsle = HIGH;
 
-                holdningVarsle = HIGH;
+            int motor;
+                
+            if (trykk1) {
+                int motor = vib1;
+            } else {
+                int motor = vib2;
             }
+
+            analogWrite(motor, 255);
+            delay(100);
+            analogWrite(motor, 0);
+            delay(100);
+            analogWrite(motor, 255);
+            delay(300);
+            analogWrite(motor, 0);
+
+            holdningCounter -= holdningVarselIntervallSek*klokkehastighet;
 
         }
     
@@ -87,7 +98,8 @@ void loop() {
             if (holdningVarsle == HIGH) {
 
               holdningVarsle = LOW;
-              analogWrite(vib1, 0);
+              analogWrite(vib2, 200);
+              delay(200);
               analogWrite(vib2, 0);
             
             }
@@ -98,14 +110,14 @@ void loop() {
 
     if (trykk1 || trykk2) {
 
-        if (pauseCounter < pauseEtterMin*60*5) {
+        if (pauseCounter < pauseEtterMin*60*klokkehastighet) {
 
             pauseCounter++;
 
         } else {
 
-            if (!pauseVarsle) {
-                pauseVarsle = HIGH;
+            if (!pauseStatus) {
+                pauseStatus = HIGH;
             }
 
             analogWrite(vib1, pauseVarselVib ? 255 : 0);
@@ -116,9 +128,9 @@ void loop() {
 
     } else {
 
-        if (pauseVarsle) {
+        if (pauseStatus) {
                     
-            pauseVarsle = LOW;
+            pauseStatus = LOW;
             analogWrite(vib1, 0);
             analogWrite(vib2, 0);
 
@@ -155,7 +167,7 @@ void loop() {
 
         if ((trykk1 || trykk2)) {
 
-            sendeData = 1 + holdning + (pauseVarsle*2);
+            sendeData = 1 + holdning + (pauseStatus*2);
         
             Serial.write(sendeData);
             sendeCount = 0;
