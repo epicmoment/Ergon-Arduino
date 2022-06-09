@@ -1,5 +1,5 @@
 {
     "board": "arduino:avr:uno",
-    "port": "COM6",
-    "sketch": "stolrygg\\stolrygg.ino"
+    "port": "COM5",
+    "sketch": "testsketch\\test.ino"
 }
