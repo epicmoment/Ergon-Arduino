@@ -4,9 +4,9 @@ int fargepins[] = {10, 11};
 
 void setup() {
   
-    for (int pin : ledpins) {
-        pinMode(pin, OUTPUT);
-        digitalWrite(pin, HIGH);
+    for (int pin = 0; pin < sizeof(ledpins); pin++) {
+        pinMode(ledpins[pin], OUTPUT);
+        digitalWrite(ledpins[pin], HIGH);
     }
     
     pinMode(7, INPUT_PULLUP);
@@ -14,9 +14,8 @@ void setup() {
     
     pinMode(fargepins[0], OUTPUT);
     pinMode(fargepins[1], OUTPUT);
-    settFarge(0, 255);
-
-  
+    settFarge(255, 0);
+ 
 }
 
 
@@ -41,11 +40,11 @@ void loop() {
   
     delay(50);
 
-    if (!digitalRead(8)) {
+    /*if (!digitalRead(8)) {
         settFarge(0, 255);
     } else {
         settFarge(255, 0);
-    }
+    }*/
   
 }
   

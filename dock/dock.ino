@@ -7,10 +7,8 @@ int scoreKnapp = 7;
 int snoozeKnapp = 8;
 
 // Variabler for henting og telling av data fra stolryggen
-unsigned long serialSiste = millis();
-unsigned serialIntervall_ms = 500;
-int serialTotal = 1;
-int serialGode = 1;
+int holdningTotal = 1;
+int holdningGode = 1;
 
 // Variabler for visning av poengsum.
 bool viserScore = false; 
@@ -20,17 +18,25 @@ int antallLedsTotal = 0;
 int antallLedsPaa = 0;
 
 // Variabler for visning av pausevarsel
-int visPause = 0;
+bool pauseLysPaa = false;
+bool pauseBlink = false;
+int pauseBlinkCounter = 0;
+int pauseFerdig = false;
+
+// Variabler for stillemodus
+bool stillemodus = false;
+unsigned long stillemodusStart = millis();
+int stillemodusLengdeMin = 1; // 30 min
 
 void setup() {
 
 	Serial.begin(9600);
 
-	// Setter alle pins som går til LEDs til output, og sett de til HIGH, fordi
+	// Setter alle pins som går til LEDs til output, og til HIGH, fordi
 	// LOW skrur lysene på i denne kretsen
-	for (int i : ledpins) {
-		pinMode(ledpins[i],  OUTPUT);
-		digitalWrite(ledpins[i], HIGH);
+	for (int pin : ledpins) {
+		pinMode(pin,  OUTPUT);
+		digitalWrite(pin, HIGH);
 	}
 	
 	// To analoge pins styrer fargen hos alle 5 leds. Settes til output.
@@ -41,45 +47,68 @@ void setup() {
 	// brukt så kretsen kunne være enklere med færre resistorer.
 	pinMode(scoreKnapp, INPUT_PULLUP);
 	pinMode(snoozeKnapp, INPUT_PULLUP);
+
+	settFarge (127, 127);
           
 }
 
 // Hovedloop hvor mange ting sjekkes 10 ganger i sekundet.
 void loop() {
- 
-  	// Innlesing av data fra stolrygg via Serial hvert sekund.
-	// Hopper over om det er under et sekund siden siste henting.
-  	if (millis() > serialSiste + serialIntervall_ms) {
-    
-    	serialSiste = millis();
+	
+	if (Serial.available() > 0) {
 
-		visPause = false;
-      
-        if (Serial.available() > 0) {
+		int byte = Serial.read();
 
-            int byte = Serial.read();
-            if (byte < 2) {
-				serialTotal++;
-				if(byte == 1) {
-                	serialGode++;
-				}
-            }
+		if (byte == 1 || byte == 2) {
 
-			if (byte > 2) {
-				visPause = true;
+			holdningTotal++;
+			if(byte == 2) {
+				holdningGode++;
 			}
 
-			// Til debugging
-			Serial.print("Byte: ");
-			Serial.print(byte);
-            Serial.print(" - Total: ");
-            Serial.print(serialTotal);
-            Serial.print(" - Gode: ");
-            Serial.println(serialGode);
+		} else {
 
-    	}
-      
-    }
+			switch (byte) {
+
+				// pauseblink
+				case 3:
+					pauseLysPaa = true;
+					pauseBlink = true;
+					pauseBlinkCounter = 0;
+					pauseFerdig = false;
+					break;
+
+				// konstant lys
+				case 4:
+					pauseLysPaa = true;
+					pauseBlink = false;
+					pauseFerdig = false;
+					break;
+
+				// pause ferdig
+				case 5:
+					pauseFerdig = true;
+					break;
+
+				// pause avsluttet
+				case 6:
+					pauseLysPaa = false;
+					if (!viserScore) skruAvLeds();
+					break;
+
+			}
+
+		}
+
+		// Til debugging
+		/*Serial.print("Byte: ");
+		Serial.print(byte);
+		Serial.print(" - Total: ");
+		Serial.print(holdningTotal);
+		Serial.print(" - Gode: ");
+		Serial.println(holdningGode);*/
+
+	}
 
 	// Oppgaver om skal utføres om poengsumen skal vises i denne syklusen.
 	if (viserScore) {
@@ -101,22 +130,38 @@ void loop() {
 		// poengsum ble trykt på sist, og skjuler så poengsummen.
 		if (millis() > visScoreStart + (visScoreLengde_ms)) {
 
-			Serial.println("Fjerner lys!");
 			skruAvLeds();
+			settFarge(127, 127);
 			viserScore = false;
 
 		}
 
-	} else if (visPause) {
+	} else if (pauseLysPaa) {
 
-		digitalWrite(10, 255);
-		digitalWrite(3, 255);
+		if (pauseBlink) {
 
-	} else {
+			settFarge(127, 127);
 
-		//TODO: Legg til sjekk om pauselys er på!
-		if (true) {
-			skruAvLeds();
+			if (pauseBlinkCounter == 0) {
+				digitalWrite(ledpins[1], LOW);
+				digitalWrite(ledpins[3], LOW);;
+            } else if (pauseBlinkCounter == 10) {
+				skruAvLeds();
+            }
+
+            pauseBlinkCounter += pauseBlinkCounter == 19 ? -19 : 1;
+
+		} else {
+			
+			if (pauseFerdig) {
+				settFarge(0, 255);
+			} else {
+				settFarge(127, 127);
+			}
+
+			skruPaaScoreLed(1);
+			skruPaaScoreLed(3);
+
 		}
 
 	}
@@ -135,6 +180,56 @@ void loop() {
 		visScoreStart = millis();
 
     }
+
+	// Stillemodus-knapp
+	if (!digitalRead(snoozeKnapp)) {
+
+		stillemodus = !stillemodus;
+
+		skruAvLeds();
+		settFarge(0, 255);
+
+		if (stillemodus) {
+			
+			stillemodusStart = millis();
+
+			for (int i = 0; i < 2; i++) {
+				digitalWrite(ledpins[2], i);
+				delay(100);
+				digitalWrite(ledpins[1], i);
+				digitalWrite(ledpins[3], i);
+				delay(100);
+				digitalWrite(ledpins[0], i);
+				digitalWrite(ledpins[4], i);
+				delay(100);
+			}
+
+		} else {
+
+			for (int i = 0; i < 2; i++) {
+				digitalWrite(ledpins[0], i);
+				digitalWrite(ledpins[4], i);
+				
+				delay(100);
+				digitalWrite(ledpins[1], i);
+				digitalWrite(ledpins[3], i);
+				delay(100);
+				digitalWrite(ledpins[2], i);
+				delay(100);
+			}
+			
+		}
+
+		Serial.write(stillemodus);
+
+	} else {
+
+		/*if (stillemodus && ((millis() - stillemodusStart) > (stillemodusLengdeMin*60*1000))) {
+			stillemodus = false;
+			Serial.write(stillemodus);
+		}*/
+
+	}
   	
 	// Venter
     delay(100);
@@ -147,13 +242,13 @@ void visScore() {
 	
 	skruAvLeds();
 
-	float score = (float) serialGode / (float) serialTotal * 4.7;
+	float score = (float) holdningGode / (float) holdningTotal * 4.7;
 
 	// Debugging
-	Serial.print("Ratio: ");
-	Serial.print((float) serialGode / (float) serialTotal);
+	/*Serial.print("Ratio: ");
+	Serial.print((float) holdningGode / (float) holdningTotal);
 	Serial.print(" - Score: ");
-	Serial.println(score);
+	Serial.println(score);*/
 
 	antallLedsTotal = score + 1;
 	antallLedsPaa = 0;
@@ -170,8 +265,6 @@ void visScore() {
 void skruPaaScoreLed(int lednr) {
 
 	digitalWrite(ledpins[lednr], LOW);
-	digitalWrite(ledpins[lednr], LOW);
-
 	antallLedsPaa++;
 
 }
@@ -179,8 +272,8 @@ void skruPaaScoreLed(int lednr) {
 // Funksjon for å skru av alle LEDs når poengsummen ikke skal vises.
 void skruAvLeds() {
 
-	for (int i = 0; i < 5; i++) {
-		digitalWrite(ledpins[i], HIGH);
+	for (int pin : ledpins) {
+		digitalWrite(pin, HIGH);
 	}
 
 	antallLedsTotal = 0;
@@ -193,3 +286,4 @@ void settFarge(int r, int g) {
     analogWrite(fargepins[0], r);
     analogWrite(fargepins[1], g);
 }
+

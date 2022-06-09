@@ -8,6 +8,8 @@ int trykk1 = LOW;
 int trykk2 = LOW;
 
 int klokkehastighet = 5;
+int sendeCount = 0;
+bool stillemodus = false;
 
 int holdningVarselSek = 15;
 int holdning = HIGH;
@@ -16,13 +18,15 @@ int holdningVarsle = LOW;
 int holdningVarselIntervallSek = 8;
 
 int pauseEtterMin = 2;
-int pauseVarighetMin = 1;
+int pauseVarighetMin = 1; // Pass på at denne går opp i pauseEtterMin
 int pauseCounter = 0;
-int pauseStatus = 0; // 0: Ikke ta pause, 1: Ta pause, 2: Bruker tar pause, 3: Pause er ferdig, 4: Bruker avsluttet pause
-int pauseVarselVib = LOW;
+bool taPause = false;
+bool tarPause = false;
+int pauseVibCounter = 0;
+bool varslePause = false;
+bool pauseFerdig = false;
 
-int sendeCount = 0;
-int sendeData = 0;
+
 
 void setup() {
     
@@ -45,138 +49,220 @@ void loop() {
     trykk1 = digitalRead(sensor1);
     trykk2 = digitalRead(sensor2);
     
+    if (Serial.available() > 0) {
 
-    // Holdning
+        int byte = Serial.read();
+
+        switch (byte) {
+
+            // start stillemodus
+            case 1:
+                stillemodus = true;
+                analogWrite(vib1, LOW);
+                analogWrite(vib1, LOW);
+                break;
+
+            // stopp stillemodus
+            case 0:
+                stillemodus = false;
+                break;
+
+        }
+
+    }
 
     // Sjekker om kun en trykksensor gir input om gangen. Om begge 
     // er på sitter brukeren riktig, om ingen er på sitter ikke
     // brukeren på stolen, og om kun en er på sitter brukeren
     // antakeligvis med dårlig holdning.
-    if (trykk1 != trykk2) {
+    holdning = !(trykk1 != trykk2);
 
-        holdning = LOW;
+
+    // Hvis stillemodus ikke er på
+    if (!stillemodus) {
+
+
+        // HOLDNING
+
+        if (!holdning) {
         
-        // Teller hvor lenge brukeren har sittet med dårlig holdning.
-        if (holdningCounter < holdningVarselSek*klokkehastighet) {
+            // Teller hvor lenge brukeren har sittet med dårlig holdning.
+            if (holdningCounter < holdningVarselSek*klokkehastighet) {
 
-            holdningCounter++;
+                holdningCounter++;
 
-        } else {
-
-            holdningVarsle = HIGH;
-
-            int motor;
-                
-            if (trykk1) {
-                int motor = vib1;
             } else {
-                int motor = vib2;
-            }
 
-            analogWrite(motor, 255);
-            delay(100);
-            analogWrite(motor, 0);
-            delay(100);
-            analogWrite(motor, 255);
-            delay(300);
-            analogWrite(motor, 0);
+                holdningVarsle = HIGH;
 
-            holdningCounter -= holdningVarselIntervallSek*klokkehastighet;
-
-        }
-    
-    // Brukeren sitter enten med god holdning eller ikke på stolen.
-    } else {
-          
-        holdning = HIGH;
-
-        // Slutter å varsle og teller ned hvor lenge brukeren har sittet med dårlig holdning.      
-        if (holdningCounter > 0) {
-
-            holdningCounter--;
-          
-            if (holdningVarsle == HIGH) {
-
-              holdningVarsle = LOW;
-              analogWrite(vib2, 200);
-              delay(200);
-              analogWrite(vib2, 0);
-            
-            }
-
-        }
-    
-    }
-
-    if (trykk1 || trykk2) {
-
-        if (pauseCounter < pauseEtterMin*60*klokkehastighet) {
-
-            pauseCounter++;
-
-        } else {
-
-            if (!pauseStatus) {
-                pauseStatus = HIGH;
-            }
-
-            analogWrite(vib1, pauseVarselVib ? 255 : 0);
-            analogWrite(vib2, pauseVarselVib ? 255 : 0);
-            pauseVarselVib = !pauseVarselVib;
-
-        }
-
-    } else {
-
-        if (pauseStatus) {
+                int motor;
                     
-            pauseStatus = LOW;
-            analogWrite(vib1, 0);
-            analogWrite(vib2, 0);
+                if (trykk1) {
+                    int motor = vib1;
+                } else {
+                    int motor = vib2;
+                }
 
-        }
+                // Gi varslingsmønster
+                analogWrite(motor, 255);
+                delay(100);
+                analogWrite(motor, 0);
+                delay(100);
+                analogWrite(motor, 255);
+                delay(300);
+                analogWrite(motor, 0);
 
-        if (pauseCounter > 0) {
-
-            int tellNedMed = pauseVarighetMin*60*5*(pauseEtterMin/pauseVarighetMin);
-
-            if (pauseCounter > tellNedMed) {
-
-                pauseCounter -= tellNedMed;
-
-            } else {
-
-                pauseCounter = 0;
+                // Sett teller litt tilbake for å vente litt før neste varsel
+                holdningCounter -= holdningVarselIntervallSek*klokkehastighet;
 
             }
 
+        // Brukeren sitter enten med god holdning eller ikke på stolen.
+        } else {
+    
+            // Slutter å varsle og teller ned hvor lenge brukeren har sittet med dårlig holdning.      
+            if (holdningCounter > 0) {
+
+                holdningCounter--;
+            
+                if (holdningVarsle == HIGH) {
+
+                    holdningVarsle = LOW;
+
+                    // Godkjenningsvibrasjon
+                    analogWrite(vib2, 200);
+                    delay(200);
+                    analogWrite(vib2, 0);
+                
+                }
+
+            }
+
+        }  
+
+        // PAUSE
+
+        // Bruker sitter på stolen
+        if (trykk1 || trykk2) { 
+
+            // Tell opp hvis brukeren sitter og ikke har begynt pause
+            // hver count representerer 1/5(klokkehastighet) sekunder
+            if (!taPause) {
+                pauseCounter += 20;
+            }
+
+            if (pauseCounter >= pauseEtterMin*60*klokkehastighet) {
+
+                // Start pausevarsling
+                if (!taPause) {
+                    taPause = true;
+
+                    // Send kode 3: blink
+                    Serial.write(3);
+                    varslePause = true;
+                    pauseVibCounter = 0;
+
+                }
+
+            }
+
+            // Vibrer og blink om bruker setter seg ned i løpet av pause
+            if (taPause && tarPause) {
+
+                // Send kode 3: blink
+                Serial.write(3);
+                varslePause = true;
+                pauseVibCounter = 0;
+
+            }
+
+            if (varslePause) {
+
+                if (pauseVibCounter == 0) {
+                    analogWrite(vib1, 255);
+                    analogWrite(vib2, 255);
+                } else if (pauseVibCounter == 5) {
+                    analogWrite(vib1, 0);
+                    analogWrite(vib2, 0);
+                }
+
+                pauseVibCounter += pauseVibCounter == 9 ? -9 : 1;
+
+            }
+
+            if (pauseFerdig) {
+                    pauseFerdig = false;
+
+                    // Send kode 6: pause avsluttet
+                    Serial.write(6);
+                    varslePause = false;
+                    
+            }
+
+            tarPause = false;
+
+        // Bruker sitter ikke på stolen
+        } else { 
+
+            // Sjekk om bruker nettopp reiste seg
+            if (taPause && !tarPause) {
+
+                // Send kode 4: lys konstant
+                Serial.write(4);
+
+                varslePause = false;
+                analogWrite(vib1, 0);
+                analogWrite(vib2, 0);
+
+            }
+
+            if (pauseCounter > 0) {
+
+                // Tell ned slik at en hel pause ender opp på 0.
+                // Ganger med 60 for mer nøyaktig int-divisjon
+                int tellNedMed = pauseEtterMin/pauseVarighetMin;
+
+                if (pauseCounter > tellNedMed) {
+                    pauseCounter -= tellNedMed *20;
+                } else {
+                    pauseCounter = 0;
+
+                }
+
+
+            } else {
+
+                if (taPause) {
+                    taPause = false;
+                    pauseFerdig = true;
+
+                    // Send kode 5: pause ferdig
+                    Serial.write(5);
+                    varslePause = false;
+                    
+                }
+
+            }
+
+            tarPause = true;
+            
         }
-        
+
     }
 
-    // Send data om holdning og pause til docken hver 11. kjøresyklus
+    // Send data om holdning til docken hver 11. kjøresyklus
     // 1: Dårlig holdning
     // 2: God holdning
-    // 3: Ta pause, dårlig holdning
-    // 4: Ta pause, god holdning
     if (sendeCount < 10) {
-        
         sendeCount++;
-    
     } else {
-
         if ((trykk1 || trykk2)) {
-
-            sendeData = 1 + holdning + (pauseStatus*2);
-        
-            Serial.write(sendeData);
+            Serial.write(1 + holdning);
             sendeCount = 0;
-
         }      
-        
     }
 
-    /* Serial.print("Sensor 1: ");
+    /*Serial.print("Sensor 1: ");
     Serial.print(trykk1);
     Serial.print(" - Sensor 2: ");
     Serial.print(trykk2);
@@ -185,7 +271,8 @@ void loop() {
     Serial.print(" - PCount: ");
     Serial.print(pauseCounter);
     Serial.print(" - Varsle pause: ");
-    Serial.println(pauseVarsle); */
+    Serial.println(taPause);*/
 
     delay(200);
+
 }
