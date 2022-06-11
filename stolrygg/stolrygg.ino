@@ -48,20 +48,15 @@ void loop() {
     // Leser av inndata fra trykksensorer
     trykk1 = digitalRead(sensor1);
     trykk2 = digitalRead(sensor2);
-
-    //Serial.print(Serial.available());
     
     if (Serial.available() > 0) {
 
         int byte = Serial.read();
 
-        //Serial.println(byte == 1);
-
         switch (byte) {
 
             // start stillemodus
             case 1:
-                //Serial.println("Stillemodus paa!");
                 stillemodus = true;
                 analogWrite(vib1, LOW);
                 analogWrite(vib1, LOW);
@@ -69,7 +64,6 @@ void loop() {
 
             // stopp stillemodus
             case 0:
-                //Serial.println("Stillemodus av!");
                 stillemodus = false;
                 break;
 
@@ -77,7 +71,7 @@ void loop() {
 
     }
 
-    // Sjekker om kun en trykksensor gir input om gangen. Om begge 
+    // Sjekker om kun én trykksensor gir input om gangen. Om begge 
     // er på sitter brukeren riktig, om ingen er på sitter ikke
     // brukeren på stolen, og om kun en er på sitter brukeren
     // antakeligvis med dårlig holdning.
@@ -131,11 +125,11 @@ void loop() {
 
                 holdningCounter--;
             
+                // Godkjenningsvibrasjon til når brukeren setter seg ned med 
                 if (holdningVarsle == HIGH) {
 
                     holdningVarsle = LOW;
 
-                    // Godkjenningsvibrasjon
                     analogWrite(vib2, 200);
                     delay(200);
                     analogWrite(vib2, 0);
@@ -154,9 +148,10 @@ void loop() {
             // Tell opp hvis brukeren sitter og ikke har begynt pause
             // hver count representerer 1/5(klokkehastighet) sekunder
             if (!taPause) {
-                pauseCounter += 2;
+                pauseCounter++;
             }
 
+            // Sjekker om bruker har sittet på stolen 40 minutter i strekk
             if (pauseCounter >= pauseEtterMin*60*klokkehastighet) {
 
                 // Start pausevarsling
@@ -267,17 +262,6 @@ void loop() {
             sendeCount = 0;
         }      
     }
-
-    /*Serial.print("Sensor 1: ");
-    Serial.print(trykk1);
-    Serial.print(" - Sensor 2: ");
-    Serial.print(trykk2);
-    Serial.print(" - HCount: ");
-    Serial.print(holdningCounter);
-    Serial.print(" - PCount: ");
-    Serial.print(pauseCounter);
-    Serial.print(" - Varsle pause: ");
-    Serial.println(taPause);*/
 
     delay(200);
 

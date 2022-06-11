@@ -14,7 +14,6 @@ void setup() {
     
     pinMode(fargepins[0], OUTPUT);
     pinMode(fargepins[1], OUTPUT);
-    settFarge(255, 0);
  
 }
 
@@ -23,23 +22,18 @@ void loop() {
  
     if (!digitalRead(7)) {
 
-        int farger[5][2] = {{255, 0}, {200, 50}, {170, 170}, {50, 200}, {0, 255}};
+        //int farger[5][2] = {{255, 0}, {200, 50}, {170, 170}, {50, 200}, {0, 255}};
 
-        for (int i = 0; i < 5; i++) {
-            digitalWrite(ledpins[i], LOW);
-            delay(100);
-        }
+        settFarge(130, 50);
 
-        delay(3500);
+        digitalWrite(ledpins[0], LOW);
+        digitalWrite(ledpins[4], LOW);
 
-        for (int i = 0; i < 5; i++) {
-            digitalWrite(ledpins[i], HIGH);
-        }
+        delay(5000);
+
+        settFarge(0, 255);
 
     }
-  
-    Serial.println(digitalRead(7));
-    delay(50);
 
     /*if (!digitalRead(8)) {
         settFarge(0, 255);
